@@ -743,7 +743,7 @@ function App() {
     if (!simulationActive) return undefined;
     const timer = window.setInterval(() => {
       setSimulationStep((step) => (step + 1) % simulationSteps.length);
-    }, 5800);
+    }, 7800);
 
     return () => window.clearInterval(timer);
   }, [simulationActive]);
