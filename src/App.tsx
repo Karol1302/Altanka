@@ -214,6 +214,20 @@ function ToggleButton({
 }
 
 function dimensionsForPart(part: PartSpec) {
+  const name = part.name;
+
+  if (name.startsWith("K")) {
+    return "Długość: ok. 266 cm; przekrój: 14 × 7 cm; dach 20°, cięcie pionowe przy kalenicy";
+  }
+
+  if (name.startsWith("A_")) {
+    return "Zastrzał A: trapez 76/56 cm, wys. ok. 11 cm, gr. 7 cm; montaż pod 45°";
+  }
+
+  if (name.startsWith("B_")) {
+    return "Zastrzał B: trapez 96/76 cm, wys. ok. 11 cm, gr. 7 cm; narożne usztywnienie wieńca";
+  }
+
   if (part.geometry.kind === "box") {
     const [dx, dy, dz] = part.geometry.size;
     return `Wymiary: ${dx.toFixed(1)} × ${dy.toFixed(1)} × ${dz.toFixed(1)} cm`;
@@ -222,14 +236,16 @@ function dimensionsForPart(part: PartSpec) {
   const points = partPoints(part);
   const min: Point3 = [Infinity, Infinity, Infinity];
   const max: Point3 = [-Infinity, -Infinity, -Infinity];
+
   points.forEach((point) => {
     point.forEach((value, index) => {
       min[index] = Math.min(min[index], value);
       max[index] = Math.max(max[index], value);
     });
   });
+
   const dims = max.map((value, index) => value - min[index]);
-  return `Obrys: ${dims[0].toFixed(1)} × ${dims[1].toFixed(1)} × ${dims[2].toFixed(1)} cm`;
+  return `Obrys techniczny XYZ: ${dims[0].toFixed(1)} × ${dims[1].toFixed(1)} × ${dims[2].toFixed(1)} cm`;
 }
 
 function PartMesh({ part, selected, onSelect }: { part: PartSpec; selected: boolean; onSelect: (selection: Selection) => void }) {
@@ -612,18 +628,18 @@ const Scene = forwardRef<
     () => ({
       setPreset(preset: ViewPreset) {
         const target = new THREE.Vector3(0, 1.65, 0);
-        const position = new THREE.Vector3(7.2, 5.2, 8.2);
+        const position = new THREE.Vector3(11.5, 7.2, 12.5);
         const up = new THREE.Vector3(0, 1, 0);
 
         if (preset === "top") {
-          position.set(0, 16.2, 0.02);
+          position.set(0, 20.0, 0.02)
           target.set(0, 0, 0);
           up.set(0, 0, -1);
         } else if (preset === "front") {
-          position.set(0, 2.2, -13.6);
+          position.set(0, 2.4, -17.5)
           target.set(0, 1.7, 0);
         } else if (preset === "side") {
-          position.set(14.4, 2.25, 0);
+          position.set(18.0, 2.6, 0)
           target.set(0, 1.7, 0);
         } else if (preset === "braceA") {
           position.set(-2.6, 2.75, -3.85);
@@ -632,8 +648,8 @@ const Scene = forwardRef<
           position.set(-2.2, 3.28, -3.1);
           target.set(-1.46, 2.6, -2.42);
         } else if (preset === "ridge") {
-          position.set(2.75, 3.9, 2.85);
-          target.set(0, 3.3, 0);
+          position.set(5.6, 5.4, 6.0);
+          target.set(0, 3.05, 0);
         } else if (preset === "ties") {
           position.set(2.8, 3.4, -1.65);
           target.set(0, 3.0, -0.45);
