@@ -264,6 +264,15 @@ button {
   grid-column: 1 / -1;
 }
 
+.simulation-toggle {
+  min-height: 40px;
+}
+
+.segmented .simulation-toggle.is-active {
+  border-color: rgba(127, 215, 164, 0.78);
+  background: rgba(36, 83, 58, 0.92);
+}
+
 .focus-list {
   display: grid;
   gap: 7px;

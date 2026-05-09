@@ -1,4 +1,4 @@
-import { Canvas, useThree } from "@react-three/fiber";
+import { Canvas, useFrame, useThree } from "@react-three/fiber";
 import { Billboard, ContactShadows, Edges, Environment, Grid, Line, OrbitControls, Text } from "@react-three/drei";
 import {
   Download,
@@ -7,6 +7,8 @@ import {
   Info,
   Layers,
   Menu,
+  Pause,
+  Play,
   Ruler,
   ShieldAlert,
   Snowflake,
@@ -94,6 +96,33 @@ const viewShortLabels: Record<ViewPreset, string> = {
   ties: "J",
   supports: "P"
 };
+
+const simulationSteps: Array<{ mode: LoadMode; preset: ViewPreset; name: string; note: string }> = [
+  {
+    mode: "dead",
+    preset: "ridge",
+    name: "Symulacja: ciężar pokrycia",
+    note: "Stały ciężar OSB, papy i gontu dociska połacie. Siła schodzi przez krokwie na wieniec, słupy, kotwy i fundament."
+  },
+  {
+    mode: "snow",
+    preset: "front",
+    name: "Symulacja: śnieg",
+    note: "Śnieg działa pionowo na obie połacie i zwykle daje największe obciążenie dachu. Najważniejsze są krokwie, jętki, podpory i połączenia krokiew-wieniec."
+  },
+  {
+    mode: "wind",
+    preset: "side",
+    name: "Symulacja: wiatr",
+    note: "Wiatr od strony słupa S2 napiera do środka konstrukcji, a na dachu może pojawić się podrywanie. Kluczowe są kotwy, zastrzały i ciągłość połączeń aż do fundamentu."
+  },
+  {
+    mode: "all",
+    preset: "iso",
+    name: "Symulacja: obciążenia razem",
+    note: "Ten etap pokazuje sumaryczny obraz ryzyk: nacisk pionowy, parcie boczne oraz ssanie połaci. To dobry widok do rozmowy o kotwach i złączach."
+  }
+];
 
 function createPrismGeometry(part: Extract<PartSpec["geometry"], { kind: "prism" }>) {
   const base = part.base.map((point) => new THREE.Vector3(...toScenePoint(point)));
@@ -377,13 +406,15 @@ function SceneArrow({
   direction,
   length,
   color,
-  label
+  label,
+  animated = false
 }: {
   origin: Point3;
   direction: [number, number, number];
   length: number;
   color: string;
   label: string;
+  animated?: boolean;
 }) {
   const arrow = useMemo(() => {
     const helper = new THREE.ArrowHelper(new THREE.Vector3(...direction).normalize(), scenePoint(origin), length, color, length * 0.24, length * 0.1);
@@ -394,6 +425,15 @@ function SceneArrow({
     const dir = new THREE.Vector3(...direction).normalize();
     return scenePoint(origin).add(dir.multiplyScalar(length + 0.08));
   }, [direction, length, origin]);
+
+  useFrame(({ clock }) => {
+    if (!animated) {
+      arrow.scale.setScalar(1);
+      return;
+    }
+    const pulse = 1 + Math.sin(clock.elapsedTime * 4.2) * 0.12;
+    arrow.scale.setScalar(pulse);
+  });
 
   return (
     <group>
@@ -407,7 +447,7 @@ function SceneArrow({
   );
 }
 
-function DownwardLoad({ mode }: { mode: "dead" | "snow" }) {
+function DownwardLoad({ mode, animated = false }: { mode: "dead" | "snow"; animated?: boolean }) {
   const color = mode === "snow" ? "#72d7ff" : "#f4b24d";
   const label = mode === "snow" ? "śnieg dociska dach" : "ciężar pokrycia";
   const length = mode === "snow" ? 0.82 : 0.56;
@@ -416,14 +456,14 @@ function DownwardLoad({ mode }: { mode: "dead" | "snow" }) {
     <group>
       {[90, 200, 310].flatMap((x) =>
         [110, 300, 490].map((y) => (
-          <SceneArrow key={`${mode}-${x}-${y}`} origin={[x, y, 390]} direction={[0, -1, 0]} length={length} color={color} label={label} />
+          <SceneArrow key={`${mode}-${x}-${y}`} origin={[x, y, 390]} direction={[0, -1, 0]} length={length} color={color} label={label} animated={animated} />
         ))
       )}
     </group>
   );
 }
 
-function WindLoad() {
+function WindLoad({ animated = false }: { animated?: boolean }) {
   return (
     <group>
       {[
@@ -431,7 +471,7 @@ function WindLoad() {
         [475, -70, 240],
         [475, -70, 320]
       ].map((origin, index) => (
-        <SceneArrow key={`wind-${index}`} origin={origin as Point3} direction={[-1, 0, 1]} length={1.08} color="#a889ff" label="wiatr napiera" />
+        <SceneArrow key={`wind-${index}`} origin={origin as Point3} direction={[-1, 0, 1]} length={1.08} color="#a889ff" label="wiatr napiera" animated={animated} />
       ))}
       {[
         [80, 150, 292],
@@ -439,23 +479,23 @@ function WindLoad() {
         [80, 450, 292],
         [320, 450, 292]
       ].map((origin, index) => (
-        <SceneArrow key={`uplift-${index}`} origin={origin as Point3} direction={[0, 1, 0]} length={0.58} color="#ff81c0" label="podrywa dach" />
+        <SceneArrow key={`uplift-${index}`} origin={origin as Point3} direction={[0, 1, 0]} length={0.58} color="#ff81c0" label="podrywa dach" animated={animated} />
       ))}
     </group>
   );
 }
 
-function LoadArrows({ mode }: { mode: LoadMode }) {
+function LoadArrows({ mode, animated = false }: { mode: LoadMode; animated?: boolean }) {
   if (mode === "none") return null;
-  if (mode === "dead") return <DownwardLoad mode="dead" />;
-  if (mode === "snow") return <DownwardLoad mode="snow" />;
-  if (mode === "wind") return <WindLoad />;
+  if (mode === "dead") return <DownwardLoad mode="dead" animated={animated} />;
+  if (mode === "snow") return <DownwardLoad mode="snow" animated={animated} />;
+  if (mode === "wind") return <WindLoad animated={animated} />;
 
   return (
     <group>
-      <DownwardLoad mode="dead" />
-      <DownwardLoad mode="snow" />
-      <WindLoad />
+      <DownwardLoad mode="dead" animated={animated} />
+      <DownwardLoad mode="snow" animated={animated} />
+      <WindLoad animated={animated} />
     </group>
   );
 }
@@ -547,10 +587,11 @@ const Scene = forwardRef<
     showFinishedRoof: boolean;
     showWalls: boolean;
     loadMode: LoadMode;
+    simulationActive: boolean;
     selectedName?: string;
     onSelect: (selection: Selection) => void;
   }
->(({ parts, showDimensions, showOsb, showFinishedRoof, showWalls, loadMode, selectedName, onSelect }, ref) => {
+>(({ parts, showDimensions, showOsb, showFinishedRoof, showWalls, loadMode, simulationActive, selectedName, onSelect }, ref) => {
   const controlsRef = useRef<any>(null);
   const { camera } = useThree();
 
@@ -619,7 +660,7 @@ const Scene = forwardRef<
         <RoofLayers showOsb={showOsb} showFinishedRoof={showFinishedRoof} />
         <WallLayers visible={showWalls} />
         {showDimensions && <Dimensions />}
-        <LoadArrows mode={loadMode} />
+        <LoadArrows mode={loadMode} animated={simulationActive} />
         {Object.values(hotspotData).map((hotspot) => (
           <Hotspot key={hotspot.title} {...hotspot} onSelect={onSelect} />
         ))}
@@ -650,6 +691,8 @@ function InfoPanel({ selection, isOpen, onClose }: { selection: Selection; isOpe
 function App() {
   const allParts = useMemo(() => buildModel(), []);
   const cameraApi = useRef<CameraApi | null>(null);
+  const panelRef = useRef<HTMLElement | null>(null);
+  const panelToggleRef = useRef<HTMLButtonElement | null>(null);
   const [showDimensions, setShowDimensions] = useState(true);
   const [showGrill, setShowGrill] = useState(true);
   const [showClearance, setShowClearance] = useState(true);
@@ -661,12 +704,47 @@ function App() {
   const [activeView, setActiveView] = useState<ViewPreset>("iso");
   const [controlsOpen, setControlsOpen] = useState(false);
   const [infoOpen, setInfoOpen] = useState(true);
+  const [simulationActive, setSimulationActive] = useState(false);
+  const [simulationStep, setSimulationStep] = useState(0);
 
   useEffect(() => {
     if (window.matchMedia("(max-width: 900px)").matches) {
       setInfoOpen(false);
     }
   }, []);
+
+  useEffect(() => {
+    if (!controlsOpen) return undefined;
+
+    const closeOnOutsideClick = (event: PointerEvent) => {
+      const target = event.target as Node;
+      if (panelRef.current?.contains(target) || panelToggleRef.current?.contains(target)) return;
+      setControlsOpen(false);
+    };
+
+    document.addEventListener("pointerdown", closeOnOutsideClick);
+    return () => document.removeEventListener("pointerdown", closeOnOutsideClick);
+  }, [controlsOpen]);
+
+  useEffect(() => {
+    if (!simulationActive) return undefined;
+    const timer = window.setInterval(() => {
+      setSimulationStep((step) => (step + 1) % simulationSteps.length);
+    }, 5800);
+
+    return () => window.clearInterval(timer);
+  }, [simulationActive]);
+
+  useEffect(() => {
+    if (!simulationActive) return;
+    const step = simulationSteps[simulationStep];
+    setLoadMode(step.mode);
+    setActiveView(step.preset);
+    setSelected({ name: step.name, type: "symulacja obciążeń", note: step.note });
+    setInfoOpen(true);
+    setControlsOpen(false);
+    cameraApi.current?.setPreset(step.preset);
+  }, [simulationActive, simulationStep]);
 
   const visibleParts = useMemo(
     () =>
@@ -679,6 +757,7 @@ function App() {
   );
 
   const setView = (preset: ViewPreset) => {
+    setSimulationActive(false);
     setActiveView(preset);
     setSelected(viewSelection[preset]);
     setInfoOpen(true);
@@ -686,6 +765,7 @@ function App() {
   };
 
   const setLoad = (mode: LoadMode) => {
+    setSimulationActive(false);
     setLoadMode(mode);
     if (mode !== "none") {
       const load = loadCopy[mode];
@@ -696,6 +776,21 @@ function App() {
       });
       setInfoOpen(true);
     }
+  };
+
+  const toggleSimulation = () => {
+    if (simulationActive) {
+      setSimulationActive(false);
+      setLoadMode("none");
+      setSelected(viewSelection.iso);
+      setInfoOpen(true);
+      setActiveView("iso");
+      cameraApi.current?.setPreset("iso");
+      return;
+    }
+
+    setSimulationStep(0);
+    setSimulationActive(true);
   };
 
   return (
@@ -710,8 +805,10 @@ function App() {
             showFinishedRoof={showFinishedRoof}
             showWalls={showWalls}
             loadMode={loadMode}
+            simulationActive={simulationActive}
             selectedName={selected.name}
             onSelect={(selection) => {
+              setSimulationActive(false);
               setSelected(selection);
               setInfoOpen(true);
             }}
@@ -721,7 +818,7 @@ function App() {
 
       <header className="topbar">
         <div className="top-actions">
-          <button className="utility-button" type="button" onClick={() => setControlsOpen((value) => !value)}>
+          <button ref={panelToggleRef} className="utility-button" type="button" onClick={() => setControlsOpen((value) => !value)}>
             <Menu size={16} />
             <span>Panel</span>
           </button>
@@ -739,7 +836,7 @@ function App() {
         </div>
       </header>
 
-      <aside className={`control-panel ${controlsOpen ? "is-open" : "is-hidden"}`}>
+      <aside ref={panelRef} className={`control-panel ${controlsOpen ? "is-open" : "is-hidden"}`}>
         <button className="panel-close" type="button" onClick={() => setControlsOpen(false)} aria-label="Schowaj panel">
           <X size={17} />
         </button>
@@ -761,6 +858,10 @@ function App() {
             <button className={loadMode === "snow" ? "is-active" : ""} type="button" onClick={() => setLoad("snow")}><Snowflake size={15} />Śnieg</button>
             <button className={loadMode === "wind" ? "is-active" : ""} type="button" onClick={() => setLoad("wind")}><Wind size={15} />Wiatr</button>
             <button className={`wide ${loadMode === "all" ? "is-active" : ""}`} type="button" onClick={() => setLoad("all")}>Wszystko razem</button>
+            <button className={`wide simulation-toggle ${simulationActive ? "is-active" : ""}`} type="button" onClick={toggleSimulation}>
+              {simulationActive ? <Pause size={15} /> : <Play size={15} />}
+              {simulationActive ? "Zatrzymaj symulację" : "Symulacja obciążeń"}
+            </button>
           </div>
         </div>
 

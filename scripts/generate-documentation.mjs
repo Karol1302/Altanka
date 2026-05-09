@@ -72,11 +72,16 @@ const C = {
 const roofArea = 2 * (e.rafters.axis_length / 100) * (g.roof_length / 100);
 const roofPlanArea = (g.roof_width_with_overhang / 100) * (g.roof_length / 100);
 const deadQ = 0.242;
+const osbQ = (0.018 * 650 * 9.81) / 1000;
+const papaQ = (2.5 * 9.81) / 1000;
+const shingleQ = (10 * 9.81) / 1000;
+const accessoryQ = Math.max(deadQ - osbQ - papaQ - shingleQ, 0);
 const snowQ = 1.28;
 const snowExtremeQ = 1.6;
 const upliftMinQ = 0.8;
 const upliftMaxQ = 1.0;
 const windWallQ = 0.8;
+const kgPerKn = 101.97;
 const deadTotal = roofArea * deadQ;
 const snowTotal = roofArea * snowQ;
 const snowExtremeTotal = roofArea * snowExtremeQ;
@@ -443,23 +448,48 @@ bullet(
   y + 4
 );
 
-addPage("Obliczenia obciążeń");
+addPage("Ręczne obliczenia obciążeń");
 y = 88;
-y = p("Powierzchnia połaci liczona jest po skosie dachu, ponieważ obciążenia pokrycia i śniegu działają na powierzchnię połaci. Przyjęto: 2 połacie × 2,660 m długości krokwi × 6,000 m długości dachu.", M, y);
+y = p("Poniżej zapisano rachunek tak, jak można go prześledzić ręcznie: najpierw geometria dachu, potem obciążenia jednostkowe warstw i dopiero na końcu siły całkowite. Przeliczenie orientacyjne: 1 kN ≈ 101,97 kg siły.", M, y);
 y = table(
   ["Krok", "Obliczenie", "Wynik"],
   [
     ["Powierzchnia połaci", "2 × 2,660 m × 6,000 m", `${fmt(roofArea, 2)} m²`],
     ["Powierzchnia rzutu dachu", "5,000 m × 6,000 m", `${fmt(roofPlanArea, 2)} m²`],
-    ["Ciężar pokrycia", `${fmt(roofArea, 2)} × 0,242`, `${fmt(deadTotal)} kN`],
-    ["Śnieg ciężki", `${fmt(roofArea, 2)} × 1,28`, `${fmt(snowTotal)} kN`],
-    ["Śnieg bardzo ciężki", `${fmt(roofArea, 2)} × 1,60`, `${fmt(snowExtremeTotal)} kN`],
-    ["Ssanie wiatru", `${fmt(roofArea, 2)} × 0,8 do 1,0`, `${fmt(upliftMin)}-${fmt(upliftMax)} kN`],
-    ["Wiatr poziomy", "wartość robocza dla modelu", "8-10 kN"]
+    ["OSB 18 mm", "0,018 m × 650 kg/m³ × 9,81 / 1000", `${fmt(osbQ, 3)} kN/m²`],
+    ["Papa", "2,5 kg/m² × 9,81 / 1000", `${fmt(papaQ, 3)} kN/m²`],
+    ["Gont bitumiczny", "10 kg/m² × 9,81 / 1000", `${fmt(shingleQ, 3)} kN/m²`],
+    ["Zapas na mocowania/warstwy", `0,242 - ${fmt(osbQ + papaQ + shingleQ, 3)}`, `${fmt(accessoryQ, 3)} kN/m²`],
+    ["Suma stała dachu", `${fmt(osbQ, 3)} + ${fmt(papaQ, 3)} + ${fmt(shingleQ, 3)} + ${fmt(accessoryQ, 3)}`, `${fmt(deadQ, 3)} kN/m²`],
+    ["Ciężar stały całkowity", `${fmt(roofArea, 2)} m² × ${fmt(deadQ, 3)} kN/m²`, `${fmt(deadTotal, 2)} kN ≈ ${fmt(deadTotal * kgPerKn, 0)} kg`],
+    ["Śnieg ciężki", `${fmt(roofArea, 2)} m² × 1,28 kN/m²`, `${fmt(snowTotal, 2)} kN ≈ ${fmt(snowTotal * kgPerKn, 0)} kg`],
+    ["Śnieg bardzo ciężki", `${fmt(roofArea, 2)} m² × 1,60 kN/m²`, `${fmt(snowExtremeTotal, 2)} kN ≈ ${fmt(snowExtremeTotal * kgPerKn, 0)} kg`],
+    ["Ssanie wiatru na połaciach", `${fmt(roofArea, 2)} m² × 0,8 do 1,0 kN/m²`, `${fmt(upliftMin, 2)}-${fmt(upliftMax, 2)} kN`]
   ],
   M,
   y + 8,
-  [120, 230, 160],
+  [118, 245, 147],
+  { rowHeight: 21 }
+);
+
+addPage("Obliczenia wiatru i ścian");
+y = 88;
+y = p("Pełne ściany działają przy wietrze jak powierzchnie chwytające napór. W rachunku poglądowym przyjęto 0,8 kN/m² i środek parcia w połowie wysokości ściany, czyli 1,25 m nad podstawą.", M, y);
+y = table(
+  ["Element", "Rachunek ręczny", "Wynik"],
+  [
+    ["Ściana tylna: pole", "3,72 m × 2,50 m", `${fmt(rearArea, 2)} m²`],
+    ["Ściana tylna: parcie", `${fmt(rearArea, 2)} m² × 0,8 kN/m²`, `${fmt(rearWind, 2)} kN`],
+    ["Ściana tylna: moment", `${fmt(rearWind, 2)} kN × 1,25 m`, `${fmt(rearMoment, 2)} kNm`],
+    ["Ściana boczna: pole", "5,72 m × 2,50 m", `${fmt(sideArea, 2)} m²`],
+    ["Ściana boczna: parcie", `${fmt(sideArea, 2)} m² × 0,8 kN/m²`, `${fmt(sideWind, 2)} kN`],
+    ["Ściana boczna: moment", `${fmt(sideWind, 2)} kN × 1,25 m`, `${fmt(sideMoment, 2)} kNm`],
+    ["Masa desek", `${fmt(wallArea, 2)} m² × 0,010 m × 450 kg/m³`, `${fmt(wallMass, 0)} kg`],
+    ["Masa z ramą", `${fmt(wallMass, 0)} kg + ok. 55 kg`, `${fmt(wallMassWithFrame, 0)} kg`]
+  ],
+  M,
+  y + 8,
+  [122, 243, 145],
   { rowHeight: 24 }
 );
 y = section("Interpretacja", y + 4);
@@ -468,6 +498,7 @@ bullet(
     "śnieg jest największym obciążeniem pionowym w tej wizualizacji i może wielokrotnie przekraczać ciężar samego pokrycia",
     "ssanie wiatru wymaga szczególnej uwagi przy mocowaniu krokwi, OSB/pokrycia oraz kotwieniu słupów",
     "ściany drewniane zwiększają boczne obciążenie konstrukcji, więc nie powinny być dodawane bez kontroli kotew i stężeń",
+    "siły poziome ze ścian trzeba sprowadzić przez słupki, rygle, główne słupy i kotwy do fundamentu",
     "komin nie jest podporą i nie zmniejsza obciążeń dachu"
   ],
   M,
