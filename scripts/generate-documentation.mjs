@@ -99,6 +99,24 @@ const rearWind = rearArea * windWallQ;
 const sideWind = sideArea * windWallQ;
 const rearMoment = rearWind * (rearWall.height / 2);
 const sideMoment = sideWind * (sideWall.height / 2);
+const combinedExtremeQ = deadQ + snowExtremeQ;
+const rafterSpacingM = e.rafters.module_y / 100;
+const rafterLengthM = e.rafters.axis_length / 100;
+const rafterLineQ = combinedExtremeQ * rafterSpacingM;
+const rafterMoment = (rafterLineQ * rafterLengthM ** 2) / 8;
+const rafterSectionModulus = (70 * 140 * 140) / 6;
+const rafterStress = (rafterMoment * 1_000_000) / rafterSectionModulus;
+const c24DesignBending = (24 * 0.8) / 1.3;
+const rafterReserve = c24DesignBending / rafterStress;
+const ringSpanM = 3.0;
+const ringLineQ = (combinedExtremeQ * rafterLengthM) / 2;
+const ringMoment = (ringLineQ * ringSpanM ** 2) / 8;
+const ringSectionModulus = (140 * 140 * 140) / 6;
+const ringStress = (ringMoment * 1_000_000) / ringSectionModulus;
+const ringReserve = c24DesignBending / ringStress;
+const postAxialExtreme = (deadTotal + snowExtremeTotal) / 6;
+const postStress = (postAxialExtreme * 1000) / (140 * 140);
+const upliftPerPost = upliftMax / 6;
 
 function fmt(value, digits = 1) {
   return value.toFixed(digits).replace(".", ",");
@@ -387,26 +405,28 @@ doc.font(FB).fontSize(10).fillColor(C.ink).text("Widok poprzeczny: krokwie, wien
 drawSideElevation(50, 410, 500, 245, true);
 doc.font(FB).fontSize(10).fillColor(C.ink).text("Widok boczny: słupy, zastrzały A, krokwie i ściana boczna jako warstwa", 50, 666);
 
-addPage("Materiały i warstwy");
+addPage("Elementy, ilości i funkcje");
 y = 88;
 y = table(
-  ["Element", "Materiał / wymiar", "Rola i uwagi"],
+  ["Element", "Wymiary / ilość", "Połączenie i funkcja"],
   [
-    ["Słupy", "sosna C18, 14 × 14 cm", "elementy pionowe; wymagają dobrych podstaw i kotwienia"],
-    ["Wieniec", "świerk C24, 14 × 14 cm", "zamyka ramę na górze i odbiera krokwie oraz zastrzały"],
-    ["Krokwie", "świerk C24, 7 × 14 cm", "8 par, dach 20°, długość osiowa ok. 266 cm"],
-    ["Jętki i podpory P", "świerk C24, 7 × 7 cm", "spinają układ krokwi i podpierają jętki na froncie oraz tyle"],
-    ["BK", "świerk C24, 7 × 7 cm", "belka podkalenicowa pod stykiem krokwi"],
-    ["Zastrzały A/B", "sosna C18", "usztywnienie słup-wieniec oraz narożników wieńca"],
-    ["OSB", "OSB-3, zalecane 18 mm", "sztywna warstwa pod papę i gont; mocowanie wg systemu producenta"],
-    ["Papa + gont", "zielony gont bitumiczny", "warstwa pokrycia, wymaga obróbek i wentylacji"],
-    ["Ściany drewniane", "deska pióro-wpust ok. 10 mm", "traktować jako okładzinę, nie jako główną tarczę usztywniającą"],
-    ["Komin", "murowany, niezależny", "oddzielony od drewna, obrobiony blachą w sposób pozwalający na ruch"]
+    ["Słupy S1-S6", "6 szt., 14 × 14 × 250 cm, sosna C18", "Elementy nośne pionowe. Podpierają wieniec; każdy słup wymaga kotwienia do fundamentu i współpracy z zastrzałami A."],
+    ["Wieniec", "14 × 14 cm: front/tył 2 × 400 cm, boki 4 × 300 cm, C24", "Obwodowa rama górna. Odbiera krokwie, zamyka konstrukcję i w narożach współpracuje z zastrzałami B."],
+    ["Krokwie K1-K8", "16 szt., 7 × 14 × ok. 266 cm, C24", "Dach 20°, okap 50 cm. Siodło na wieńcu ok. 3,5 cm; element główny dla obciążeń śniegiem i pokryciem."],
+    ["Jętki J", "8 szt., 7 × 7 × ok. 178,4 cm, C24", "Spinają pary krokwi w połowie wysokości dachu i ograniczają rozpychanie połaci."],
+    ["Podpory P", "4 szt., 7 × 7 × ok. 32,9 cm, C24", "Pionowe podpory pod jętkami na skrajnych przekrojach: front i tył."],
+    ["BK", "1 szt., 7 × 7 × 600 cm, C24", "Belka podkalenicowa. Łączy pary krokwi w osi kalenicy i stabilizuje ich styk."],
+    ["Zastrzały A", "12 szt., trapez 76/56 cm, h ok. 11 cm, gr. 7 cm, C18", "Usztywnienie słup-wieniec. Praca głównie przy bujaniu i siłach poziomych."],
+    ["Zastrzały B", "4 szt., trapez 96/76 cm, h ok. 11 cm, gr. 7 cm, C18", "Usztywnienie naroży wieńca w rzucie poziomym."],
+    ["Płyta OSB", "OSB-3 18 mm, szacunek ok. 12 płyt", "Sztywna warstwa pod papę i gont. Wymaga dylatacji krawędzi i mocowania zgodnego z systemem."],
+    ["Papa + gont", "zielony gont bitumiczny na całej połaci", "Warstwa pokrycia; wymaga obróbek, pasa startowego, kalenicy i szczelnego detalu przy kominie."],
+    ["Ściany drewniane", "tył 3,72 × 2,50 m, bok 5,72 × 2,50 m, deska ok. 10 mm", "Osłona i dodatkowa powierzchnia łapiąca wiatr. Nie liczyć jako głównej tarczy bez projektu łączników."],
+    ["Grill i komin", "grill 120 × 80 × 115 cm, komin 58 × 45 cm", "Murowane, na osobnej płycie. Komin niezależny od drewna, z dylatacją i obróbką blacharską."]
   ],
   M,
   y,
-  [105, 135, 270],
-  { rowHeight: 24 }
+  [105, 165, 240],
+  { rowHeight: 30 }
 );
 y = section("Analiza materiałowa", y + 2);
 bullet(
@@ -451,6 +471,7 @@ bullet(
 addPage("Ręczne obliczenia obciążeń");
 y = 88;
 y = p("Poniżej zapisano rachunek tak, jak można go prześledzić ręcznie: najpierw geometria dachu, potem obciążenia jednostkowe warstw i dopiero na końcu siły całkowite. Przeliczenie orientacyjne: 1 kN ≈ 101,97 kg siły.", M, y);
+y = p("Adnotacja: są to obliczenia przybliżone. Nie wykonano pełnego modelu MES ani normowej kombinacji oddziaływań dla konkretnej lokalizacji. Nie policzono szczegółowo: lokalnej strefy śniegu i wiatru, porywów dynamicznych, mimośrodów, sztywności i poślizgu złączy, nośności kotew w konkretnym betonie, pracy gruntu, wyboczenia z imperfekcjami, wpływu wilgotności, pełzania drewna, lokalnych osłabień od nacięć oraz odporności ogniowej.", M, y, CW, 8.4);
 y = table(
   ["Krok", "Obliczenie", "Wynik"],
   [
@@ -509,6 +530,55 @@ arrow(220, 646, 220, 600, C.rafter, "pokrycie");
 arrow(365, 612, 455, 612, C.wind, "wiatr");
 arrow(500, 630, 500, 585, "#cf4d8f", "ssanie");
 
+addPage("Poglądowa ocena nośności");
+y = 88;
+y = p("Poniższa ocena służy do rozmowy ze specjalistą. Dla drewna C24 przyjęto poglądowo wytrzymałość obliczeniową na zginanie ok. 14,8 N/mm² jako 24 × 0,8 / 1,3. Wyniki nie zastępują projektu konstrukcyjnego, bo złącza, kotwy i rzeczywiste podparcia mogą ograniczyć nośność bardziej niż samo drewno.", M, y);
+y = table(
+  ["Element / przypadek", "Rachunek poglądowy", "Wniosek"],
+  [
+    [
+      "Krokwie 7 × 14 C24",
+      `q = (${fmt(deadQ, 3)} + ${fmt(snowExtremeQ, 2)}) × ${fmt(rafterSpacingM, 3)} = ${fmt(rafterLineQ, 2)} kN/m; M ≈ ${fmt(rafterMoment, 2)} kNm; naprężenie ≈ ${fmt(rafterStress, 1)} N/mm²`,
+      `zapas względem 14,8 N/mm²: ok. ×${fmt(rafterReserve, 1)}; przekrój wygląda rozsądnie przy śniegu 1,60 kN/m²`
+    ],
+    [
+      "Wieniec boczny 14 × 14 C24",
+      `q liniowe z połaci ≈ ${fmt(ringLineQ, 2)} kN/m; span 3,0 m; M ≈ ${fmt(ringMoment, 2)} kNm; naprężenie ≈ ${fmt(ringStress, 1)} N/mm²`,
+      `zapas względem 14,8 N/mm²: ok. ×${fmt(ringReserve, 1)}; ważne jest ciągłe spięcie naroży i słupów`
+    ],
+    [
+      "Słupy 14 × 14 C18",
+      `pionowo orientacyjnie (${fmt(deadTotal, 2)} + ${fmt(snowExtremeTotal, 2)}) / 6 = ${fmt(postAxialExtreme, 2)} kN na słup; nacisk ≈ ${fmt(postStress, 2)} N/mm²`,
+      "materiałowo nacisk pionowy jest niski; decydują wyboczenie, zamocowanie podstaw i siły poziome od ścian"
+    ],
+    [
+      "Podrywanie dachu",
+      `ssanie połaci: ${fmt(upliftMin, 2)}-${fmt(upliftMax, 2)} kN łącznie, średnio do ok. ${fmt(upliftPerPost, 2)} kN na słup przy prostym podziale`,
+      "nie da się podać zapasu bez konkretnych łączników; potrzebne są łączniki przeciw podrywaniu krokwi i kotwy słupów"
+    ],
+    [
+      "Ściany jako żagiel",
+      `parcie: tył ${fmt(rearWind, 2)} kN, bok ${fmt(sideWind, 2)} kN; momenty: ${fmt(rearMoment, 2)} i ${fmt(sideMoment, 2)} kNm`,
+      "to przypadek krytyczny dla kotew i stężeń; sama wytrzymałość drewna nie opisuje bezpieczeństwa układu"
+    ]
+  ],
+  M,
+  y + 8,
+  [120, 225, 165],
+  { rowHeight: 34 }
+);
+y = section("Wniosek ogólny", y + 4);
+bullet(
+  [
+    "dla obciążeń pionowych przekroje krokwi i wieńca wyglądają poglądowo z zapasem materiałowym",
+    "dla wiatru najważniejsze są łączniki, kotwy, droga sił do fundamentu i kontrola podrywania dachu",
+    "pełne ściany zwiększają komfort użytkowy, ale są obciążeniem bocznym; wymagają mocnego przeniesienia sił do słupów i fundamentów",
+    "ostateczną ocenę musi potwierdzić konstruktor po dobraniu konkretnych łączników, kotew, drewna i lokalnych obciążeń"
+  ],
+  M,
+  y + 4
+);
+
 addPage("Złącza, kotwy i komin");
 y = 88;
 y = table(
@@ -540,13 +610,23 @@ y = bullet(
   y + 4
 );
 y = section("Praktyczne dobre praktyki", y + 4);
-bullet(
+y = bullet(
   [
     "nie opierać dachu na kominie i nie usuwać dylatacji przy kominie",
     "nie liczyć cienkiej okładziny pióro-wpust jako głównego usztywnienia bez osobnego projektu",
     "zapewnić ciągłość drogi sił: dach → krokwie → wieniec → słupy → kotwy → fundament",
     "dla ścian pełnych przewidzieć dodatkowe stężenie, mocniejsze kotwienie i kontrolę wyrwania od wiatru",
     "złącza dobrać katalogowo do realnych obciążeń i konkretnego typu drewna"
+  ],
+  M,
+  y + 4
+);
+y = section("Wzmocnienia do przemyślenia", y + 4);
+bullet(
+  [
+    "jeżeli płyta fundamentowa grilla będzie solidna i zbrojona, można rozważyć ustawienie na niej jednego lub dwóch dodatkowych słupów albo niezależnej ramy pomocniczej podciągniętej do wieńca",
+    "takie słupy nie powinny obciążać ani usztywniać samego komina; komin powinien pozostać oddylatowany i pracować niezależnie od dachu",
+    "dodatkowa rama przy grillu może poprawić drogę przenoszenia sił poziomych i podparcie wieńca, ale wymaga sprawdzenia kotew, zbrojenia płyty oraz połączenia z drewnem"
   ],
   M,
   y + 4

@@ -120,7 +120,13 @@ const simulationSteps: Array<{ mode: LoadMode; preset: ViewPreset; name: string;
     mode: "all",
     preset: "iso",
     name: "Symulacja: obciążenia razem",
-    note: "Ten etap pokazuje sumaryczny obraz ryzyk: nacisk pionowy, parcie boczne oraz ssanie połaci. To dobry widok do rozmowy o kotwach i złączach."
+    note: "Ten etap pokazuje sumaryczny obraz ryzyk: nacisk pionowy, parcie boczne oraz ssanie połaci."
+  },
+  {
+    mode: "all",
+    preset: "iso",
+    name: "Wniosek symulacji",
+    note: "Wniosek: drewno wstępnie wygląda rozsądnie dla obciążeń pionowych, ale bezpieczeństwo całego układu rozstrzygają kotwy, złącza krokiew-wieniec, stężenia oraz przeniesienie sił poziomych ze ścian do fundamentu."
   }
 ];
 
@@ -407,7 +413,8 @@ function SceneArrow({
   length,
   color,
   label,
-  animated = false
+  animated = false,
+  labelAt = "tip"
 }: {
   origin: Point3;
   direction: [number, number, number];
@@ -415,6 +422,7 @@ function SceneArrow({
   color: string;
   label: string;
   animated?: boolean;
+  labelAt?: "tip" | "tail";
 }) {
   const arrow = useMemo(() => {
     const helper = new THREE.ArrowHelper(new THREE.Vector3(...direction).normalize(), scenePoint(origin), length, color, length * 0.24, length * 0.1);
@@ -423,8 +431,11 @@ function SceneArrow({
 
   const labelPosition = useMemo(() => {
     const dir = new THREE.Vector3(...direction).normalize();
+    if (labelAt === "tail") {
+      return scenePoint(origin).add(dir.multiplyScalar(-0.18));
+    }
     return scenePoint(origin).add(dir.multiplyScalar(length + 0.08));
-  }, [direction, length, origin]);
+  }, [direction, labelAt, length, origin]);
 
   useFrame(({ clock }) => {
     if (!animated) {
@@ -450,13 +461,14 @@ function SceneArrow({
 function DownwardLoad({ mode, animated = false }: { mode: "dead" | "snow"; animated?: boolean }) {
   const color = mode === "snow" ? "#72d7ff" : "#f4b24d";
   const label = mode === "snow" ? "śnieg dociska dach" : "ciężar pokrycia";
-  const length = mode === "snow" ? 0.82 : 0.56;
+  const length = mode === "snow" ? 0.72 : 0.52;
+  const arrowZ = mode === "snow" ? 442 : 422;
 
   return (
     <group>
       {[90, 200, 310].flatMap((x) =>
         [110, 300, 490].map((y) => (
-          <SceneArrow key={`${mode}-${x}-${y}`} origin={[x, y, 390]} direction={[0, -1, 0]} length={length} color={color} label={label} animated={animated} />
+          <SceneArrow key={`${mode}-${x}-${y}`} origin={[x, y, arrowZ]} direction={[0, -1, 0]} length={length} color={color} label={label} animated={animated} labelAt="tail" />
         ))
       )}
     </group>
@@ -467,11 +479,11 @@ function WindLoad({ animated = false }: { animated?: boolean }) {
   return (
     <group>
       {[
-        [475, -70, 150],
-        [475, -70, 240],
-        [475, -70, 320]
+        [540, -170, 150],
+        [540, -170, 240],
+        [540, -170, 320]
       ].map((origin, index) => (
-        <SceneArrow key={`wind-${index}`} origin={origin as Point3} direction={[-1, 0, 1]} length={1.08} color="#a889ff" label="wiatr napiera" animated={animated} />
+        <SceneArrow key={`wind-${index}`} origin={origin as Point3} direction={[-0.78, 0, 1]} length={1.18} color="#a889ff" label="wiatr napiera" animated={animated} labelAt="tail" />
       ))}
       {[
         [80, 150, 292],
@@ -653,17 +665,18 @@ const Scene = forwardRef<
       <Grid position={[0, -0.004, 0]} args={[12, 12]} cellSize={0.5} cellThickness={0.55} cellColor="#29405f" sectionSize={1} sectionThickness={1.1} sectionColor="#526d91" fadeDistance={28} fadeStrength={0.72} />
       <ContactShadows position={[0, 0.001, 0]} opacity={0.35} scale={8.6} blur={2.2} far={4} />
 
-      <group onPointerMissed={() => onSelect(viewSelection.iso)}>
+      <group onPointerMissed={() => !simulationActive && onSelect(viewSelection.iso)}>
         {parts.map((part) => (
-          <PartMesh key={part.id} part={part} selected={part.name === selectedName} onSelect={onSelect} />
+          <PartMesh key={part.id} part={part} selected={!simulationActive && part.name === selectedName} onSelect={simulationActive ? () => undefined : onSelect} />
         ))}
         <RoofLayers showOsb={showOsb} showFinishedRoof={showFinishedRoof} />
         <WallLayers visible={showWalls} />
-        {showDimensions && <Dimensions />}
+        {showDimensions && !simulationActive && <Dimensions />}
         <LoadArrows mode={loadMode} animated={simulationActive} />
-        {Object.values(hotspotData).map((hotspot) => (
-          <Hotspot key={hotspot.title} {...hotspot} onSelect={onSelect} />
-        ))}
+        {!simulationActive &&
+          Object.values(hotspotData).map((hotspot) => (
+            <Hotspot key={hotspot.title} {...hotspot} onSelect={onSelect} />
+          ))}
       </group>
 
       <OrbitControls ref={controlsRef} makeDefault enableDamping dampingFactor={0.08} minDistance={1.1} maxDistance={40} />
@@ -740,7 +753,7 @@ function App() {
     const step = simulationSteps[simulationStep];
     setLoadMode(step.mode);
     setActiveView(step.preset);
-    setSelected({ name: step.name, type: "symulacja obciążeń", note: step.note });
+    setSelected({ name: step.name, type: `symulacja obciążeń ${simulationStep + 1}/${simulationSteps.length}`, note: step.note });
     setInfoOpen(true);
     setControlsOpen(false);
     cameraApi.current?.setPreset(step.preset);
@@ -794,16 +807,16 @@ function App() {
   };
 
   return (
-    <main className="app-shell">
+    <main className={`app-shell ${simulationActive ? "is-simulating" : ""}`}>
       <section className="viewport">
         <Canvas shadows camera={{ position: [7.2, 5.2, 8.2], fov: 38, near: 0.05, far: 200 }} gl={{ antialias: true, preserveDrawingBuffer: true }}>
           <Scene
             ref={cameraApi}
             parts={visibleParts}
             showDimensions={showDimensions}
-            showOsb={showOsb}
-            showFinishedRoof={showFinishedRoof}
-            showWalls={showWalls}
+            showOsb={simulationActive || showOsb}
+            showFinishedRoof={simulationActive || showFinishedRoof}
+            showWalls={simulationActive || showWalls}
             loadMode={loadMode}
             simulationActive={simulationActive}
             selectedName={selected.name}
@@ -815,6 +828,13 @@ function App() {
           />
         </Canvas>
       </section>
+
+      {simulationActive && (
+        <button className="simulation-stop" type="button" onClick={toggleSimulation}>
+          <Pause size={16} />
+          <span>Przerwij</span>
+        </button>
+      )}
 
       <header className="topbar">
         <div className="top-actions">
