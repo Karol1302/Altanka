@@ -1,0 +1,267 @@
+{
+  "version": "v13_grill_komin",
+  "units": "cm",
+  "coordinate_system": {
+    "x": "szerokość konstrukcji, 0=lewy bok, 400=prawy bok",
+    "y": "długość konstrukcji, 0=front południowy, 600=tył północny",
+    "z": "wysokość, 0=poziom podstaw/fundamentów"
+  },
+  "global": {
+    "width": 400.0,
+    "length": 600.0,
+    "roof_width_with_overhang": 500.0,
+    "roof_length": 600.0,
+    "roof_angle_deg": 20.0,
+    "overhang_each_side_x": 50.0,
+    "top_beam_z": 264.0,
+    "ridge_rise": 72.794,
+    "ridge_z": 336.794,
+    "eave_z": 245.801
+  },
+  "materials": {
+    "pine_C18": [
+      "posts",
+      "brace_A",
+      "brace_B"
+    ],
+    "spruce_C24": [
+      "beams",
+      "rafters",
+      "ties",
+      "supports_P",
+      "BK"
+    ],
+    "masonry": [
+      "grill",
+      "chimney"
+    ]
+  },
+  "elements": {
+    "posts": {
+      "count": 6,
+      "section": [
+        14.0,
+        14.0
+      ],
+      "height": 250.0,
+      "positions_xy_lower_left": {
+        "S1_front_left": [
+          0,
+          0
+        ],
+        "S2_front_right": [
+          386.0,
+          0
+        ],
+        "S3_mid_left": [
+          0,
+          293.0
+        ],
+        "S4_mid_right": [
+          386.0,
+          293.0
+        ],
+        "S5_back_left": [
+          0,
+          586.0
+        ],
+        "S6_back_right": [
+          386.0,
+          586.0
+        ]
+      }
+    },
+    "beams_ring": {
+      "section": [
+        14.0,
+        14.0
+      ],
+      "front_back": {
+        "count": 2,
+        "length": 400.0,
+        "names": [
+          "W_FRONT_400cm",
+          "W_BACK_400cm"
+        ]
+      },
+      "sides": {
+        "count": 4,
+        "length": 300.0,
+        "names": [
+          "W_LEFT_1_300cm",
+          "W_LEFT_2_300cm",
+          "W_RIGHT_1_300cm",
+          "W_RIGHT_2_300cm"
+        ]
+      },
+      "z_bottom": 250.0,
+      "z_top": 264.0
+    },
+    "rafters": {
+      "count": 16,
+      "pairs": 8,
+      "section": [
+        7.0,
+        14.0
+      ],
+      "axis_length": 266.044,
+      "module_y": 84.714,
+      "clear_spacing_y": 77.714,
+      "y_positions": [
+        0.0,
+        84.714,
+        169.429,
+        254.143,
+        338.857,
+        423.571,
+        508.286,
+        593.0
+      ],
+      "profile": "każda para: lewa i prawa krokiew, cięcie pionowe w kalenicy, bez zachodzenia na siebie",
+      "birdsmouth_reference": {
+        "depth": 3.5,
+        "horizontal": 9.616,
+        "from_eave_along_rafter": 53.209,
+        "note": "w modelu v13 siodło opisowe, nie jako boolean cut"
+      }
+    },
+    "BK": {
+      "count": 1,
+      "section": [
+        7.0,
+        7.0
+      ],
+      "length": 600.0,
+      "position": {
+        "x": 196.5,
+        "y": 0,
+        "z": 322.794
+      },
+      "note": "belka pod kalenicą, nie w samym styku krokwi"
+    },
+    "ties_J": {
+      "count": 8,
+      "section": [
+        7.0,
+        7.0
+      ],
+      "base_length": 200.0,
+      "shorten_each_end": 10.8,
+      "bottom_length": 178.4,
+      "z_bottom": 296.897,
+      "z_top": 303.897,
+      "y_positions": [
+        0.0,
+        84.714,
+        169.429,
+        254.143,
+        338.857,
+        423.571,
+        508.286,
+        593.0
+      ],
+      "note": "górne naroża docięte pod krokiew; dolna długość ok. 178,4 cm"
+    },
+    "supports_P": {
+      "count": 4,
+      "section": [
+        7.0,
+        7.0
+      ],
+      "height": 32.897,
+      "z_bottom": 264.0,
+      "x_positions": {
+        "left": 110.85,
+        "right": 282.15
+      },
+      "y_positions": {
+        "front": 0,
+        "back": 593.0
+      }
+    },
+    "brace_A": {
+      "count": 12,
+      "shape": "trapez równoramienny obrócony 45°",
+      "long_base": 76.0,
+      "short_base": 56.0,
+      "height": 11.0,
+      "thickness": 7.0,
+      "placements": [
+        "front left/right",
+        "back left/right",
+        "left side front/mid-front/mid-back/back",
+        "right side front/mid-front/mid-back/back"
+      ],
+      "middle_side_shift": "w modelu v13 prawa strona ±7 cm; lewa strona w pliku jest nieprzesunięta — jeśli viewer ma pokazywać finalny v14c, zastosuj ±7 cm także dla lewej strony"
+    },
+    "brace_B": {
+      "count": 4,
+      "shape": "trapez równoramienny narożny w rzucie z góry",
+      "long_base": 96.0,
+      "short_base": 76.0,
+      "height": 11.0,
+      "thickness": 7.0,
+      "z_bottom": 257.0
+    },
+    "grill": {
+      "count": 1,
+      "dimensions": [
+        120.0,
+        80.0,
+        115.0
+      ],
+      "position_lower_left": [
+        140.0,
+        512.0,
+        0.0
+      ],
+      "description": "murowany grill przy tylnej ścianie, centralnie, na osobnej płycie fundamentowej"
+    },
+    "chimney": {
+      "count": 1,
+      "dimensions": [
+        58.0,
+        45.0,
+        261.794
+      ],
+      "position_lower_left": [
+        171.0,
+        529.5,
+        115.0
+      ],
+      "top_z": 376.794,
+      "clearance_zone": {
+        "clearance_each_side": 8.0,
+        "dimensions": [
+          74.0,
+          61.0,
+          261.794
+        ],
+        "position_lower_left": [
+          163.0,
+          521.5,
+          115.0
+        ]
+      },
+      "note": "komin niezależny od drewna, nie jest podporą dachu"
+    },
+    "optional_double_ridge_helper_beams": {
+      "enabled": false,
+      "section": [
+        7,
+        7
+      ],
+      "description": "opcjonalne dwie belki podkalenicowe/płatwie pomocnicze, nie używać jako domyślnego elementu bez decyzji projektowej"
+    }
+  },
+  "loads_reference": {
+    "roof_osb_recommendation": "OSB-3 18 mm",
+    "osb_boards_estimate": 12,
+    "roof_covering": "OSB + papa + gont",
+    "dead_roof_load": "0.242 kN/m² dla OSB18+papa+gont",
+    "heavy_snow": "1.28 kN/m² na dach",
+    "very_heavy_snow": "1.60 kN/m² na dach",
+    "wind_sw_horizontal": "8–10 kN roboczo",
+    "uplift": "0.8–1.0 kN/m² roboczo"
+  }
+}
